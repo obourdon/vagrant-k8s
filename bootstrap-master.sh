@@ -19,7 +19,7 @@ test -f ./nodes || cp /var/tmp/nodes ./nodes
 test -f ./nodes && echo 'for i in `cat nodes`; do screen -t $i ssh $i; done' > ./screen.sh
 
 # Either pull or copy microservices repos
-cp -a /var/tmp/microservices* ./ccp/ || touch /var/tmp/ccp-download
+cp -a /var/tmp/microservices* ./ccp/ 2>/dev/null || touch /var/tmp/ccp-download
 
 # Pull kargo
 git clone $KARGO_REPO ~/kargo
@@ -29,3 +29,18 @@ cd ~/kargo
 if [ -n "$KARGO_COMMIT" ] ; then
   git checkout $KARGO_COMMIT
 fi
+
+# Update local ssh configuration
+cat >> /root/.ssh/config << _EOF
+Host *
+User vagrant
+StrictHostKeyChecking no
+UserKnownHostsFile /dev/null
+IdentityFile ~vagrant/.ssh/id_rsa_vagrant
+_EOF
+# Update remote ssh configuration
+for ip in `cat nodes`; do
+	ssh vagrant@$ip "sudo sh -c 'rsync -a ~vagrant/.ssh /root ; chown -R root: /root/.ssh'"
+done
+sed -i -e 's/User vagrant/User root/' /root/.ssh/config
+
